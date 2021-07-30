@@ -27,7 +27,7 @@ class Grid:
 		self.rows = 0
 		self.cols = cols
 		self.cubes = []
-		self.selected = ()
+		self.selected = (0,0)
 		self.visited = {}
 		self.queue = []
 		self.graph = {}
@@ -203,7 +203,7 @@ class Grid:
 								self.cubes[i][wall].state = 3
 						else:
 							self.cubes[i][wall].state = 3
-					redrawGameWindow(win)
+					redrawGameWindow(win, buttons)
 
 			print(f" x for right: {wall + 1}, y: {y}, width: {width}, height: {height}")
 			#left
@@ -308,10 +308,34 @@ class Interface:
 
 class Button:
 
-	def __intit__(self):
-		"""
-		Buttons that will highlight if you mouse over them
-		"""
+	def __init__(self, x, y, width, height, color, text = ''):
+		self.x = x
+		self.y = y
+		self.width = width
+		self.height = height
+		self.text = text
+		self.color = color
+
+	def draw(self, win, outline = None):
+		#if outline, draw slightly larger rectangle around it
+		if outline:
+			pygame.draw.rect(win, outline, (self.x - 2, self.y - 2,self.width + 4, self.height + 4), 0)
+
+		pygame.draw.rect(win, self.color, (self.x, self.y, self.width, self.height), 0)
+
+		if self.text != '' :
+			font = pygame.font.SysFont('comicsans', self.height  - 20)
+			text = font.render(self.text, True, (200, 200, 200))
+			win.blit(text, (self.x + (self.width /2 - text.get_width() / 2), self.y + (self.height / 2 - text.get_height() / 2)))
+
+	def is_over(self,pos):
+		#pos is a tuple of (x,y) coordinates of the mouse
+		x, y = pos
+		if x > self.x and x < self.x + self.width:
+			if y > self.y and y < self.y + self.height:
+				return True
+
+		return False
 
 
 class Visualize:
@@ -322,7 +346,7 @@ class Visualize:
 		animations during the pathfinding on the board
 		"""
 
-def redrawGameWindow(win):
+def redrawGameWindow(win, buttons = []):
 	"""
 	takes all the elemts that will be drawn and draws them on the screen
 	"""
@@ -330,7 +354,11 @@ def redrawGameWindow(win):
 	grid.drawCubes(win)
 	clock.tick(30)
 	pygame.draw.rect(win, (255,0,0), (10, 19, 10 ,10))
+	if buttons: 
+		for button in buttons:	
+			button.draw(win)
 	pygame.display.update()
+	pygame.event.pump()
 
 
 
@@ -338,7 +366,14 @@ def redrawGameWindow(win):
 grid = Grid(3, ySize / 4, 55)
 grid.fillCubes()
 grid.fillGraph()
+clear_button = Button(1000, 50, 150, 50, (121,158,196), "Clear matrix")
+maze_button = Button(700, 50, 200, 50, (121,158,196), "Recursive maze")
+bfs_but = Button(400, 50, 225, 50, (121,158, 196), "Breadth first search")
+buttons = [clear_button, maze_button, bfs_but]
 running = True
+
+
+
 while running:
 
 	for event in pygame.event.get():
@@ -347,7 +382,7 @@ while running:
 			running = False
 		if event.type == pygame.KEYDOWN:
 			if event.key == pygame.K_1:	
-					grid.bfs(grid.selected)
+				grid.bfs(grid.selected)
 			if event.key == pygame.K_2:
 				grid.dfs(grid.selected)
 			if event.key == pygame.K_3:
@@ -379,6 +414,12 @@ while running:
 			clicked = grid.click(pos)
 			if clicked != None:
 				grid.select(clicked[0], clicked[1])
+			if maze_button.is_over(pos):
+				grid.resetGrid()
+				grid.divide(0, 0, grid.cols, grid.rows)
+			if bfs_but.is_over(pos):
+				grid.bfs(grid.selected)
+
 
 		if event.type == pygame.MOUSEMOTION:	
 			if pygame.mouse.get_pressed()[0]:
@@ -387,4 +428,12 @@ while running:
 					grid.select(clicked[0] , clicked[1])
 					grid.makeWall()
 
-	redrawGameWindow(win)
+			for button in buttons:
+				if button.is_over(pos):
+					button.color = (0, 128, 0)
+				else:
+					for button in buttons:
+						button.color = (121,158,196)
+
+
+	redrawGameWindow(win, buttons)
